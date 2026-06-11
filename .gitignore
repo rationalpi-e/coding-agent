@@ -1,0 +1,8 @@
+.env
+.venv
+__pycache__/
+*.pyc             #here * means any file that matches with this .pyc file should be ignored. 
+.chroma/           #.pyc means python compiled. to speed up processes such as imports, python creates this file by itself.
+*.db
+*.pyo
+*.exe
