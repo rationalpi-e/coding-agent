@@ -1,4 +1,4 @@
-# Coding Agent 🤖
+# Coding Agent 
 
 An agentic AI system that writes, executes, and fixes code autonomously. Built with LangGraph and Groq (Llama 3.3 70B). Supports Python, SQL, and C++.
 
