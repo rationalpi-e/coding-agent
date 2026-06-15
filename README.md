@@ -21,7 +21,7 @@ An agentic AI system that writes, executes, and fixes code autonomously. Built w
 | Layer | Technology |
 |---|---|
 | Agent Orchestration | LangGraph |
-| LLM | Groq — Llama 3.3 70B Versatile |
+| LLM | Groq — Llama 3.3 70B Versatile or Google Gemini or Anthropic Claude or OpenAI ChatGPT|
 | Memory | ChromaDB (vector store) |
 | UI | Streamlit |
 | Python Execution | subprocess (sandboxed) |
