@@ -359,3 +359,85 @@ def run_agent(
             response += f"\n\n---\n**{status}** (iterations: {iterations})\n```\n{execution_result}\n```"
 
     return response
+
+def run_agent_stream(
+    user_message: str,
+    language: str = "python",
+    model_name: str = "groq",
+    uploaded_file_content: str = "",
+    uploaded_file_name: str = ""
+):
+    try:
+        llm = get_llm(model_name)
+    except ValueError as e:
+        yield f"⚠️ {str(e)} — please add the API key to your .env file"
+        return
+
+    # Step 1 — detect skill
+    from tools.skill_detector import detect_skill
+    skill = detect_skill(user_message, llm)
+
+    if uploaded_file_content:
+        skill = "file_analysis"
+
+    # Step 2 — for code execution, run the full graph (needs executors)
+    if skill == "code_execution":
+        result = graph.invoke({
+            "messages": [("system", SYSTEM_PROMPT), ("human", user_message)],
+            "iteration_count": 0,
+            "status": "writing",
+            "language": language.lower(),
+            "llm": llm,
+            "uploaded_file_content": uploaded_file_content,
+            "uploaded_file_name": uploaded_file_name
+        })
+
+        last_message = result["messages"][-1].content
+        execution_result = result.get("execution_result", "")
+        iterations = result.get("iteration_count", 0)
+        test_code = result.get("test_code", "")
+
+        # Stream the final message
+        for chunk in llm.stream([
+            ("system", SYSTEM_PROMPT),
+            ("human", f"Present this solution clearly:\n\n{last_message}")
+        ]):
+            if chunk.content:
+                yield chunk.content
+
+        if test_code:
+            yield f"\n\n---\n**Tests written:**\n```python\n{test_code}\n```"
+        if execution_result:
+            status = "✅ All tests passed" if result.get("status") == "done" else "❌ Tests failed"
+            yield f"\n\n---\n**{status}** (iterations: {iterations})\n```\n{execution_result}\n```"
+
+    # Step 3 — for review, file analysis, general — stream directly, no graph needed
+    elif skill == "code_review":
+        from agent.prompts import CODE_REVIEW_PROMPT
+        from tools.review_tools import extract_code_from_message
+        lang, code = extract_code_from_message(user_message)
+        prompt = CODE_REVIEW_PROMPT.format(code=code, language=lang)
+        for chunk in llm.stream([("system", SYSTEM_PROMPT), ("human", prompt)]):
+            if chunk.content:
+                yield chunk.content
+
+    elif skill == "file_analysis":
+        from agent.prompts import FILE_ANALYSIS_PROMPT
+        ext = uploaded_file_name.split(".")[-1].lower() if "." in uploaded_file_name else "python"
+        language_map = {"py": "python", "cpp": "c++", "sql": "sql", "js": "javascript"}
+        lang = language_map.get(ext, ext)
+        prompt = FILE_ANALYSIS_PROMPT.format(
+            filename=uploaded_file_name,
+            language=lang,
+            content=uploaded_file_content,
+            task=user_message or "Analyze this file thoroughly"
+        )
+        for chunk in llm.stream([("system", SYSTEM_PROMPT), ("human", prompt)]):
+            if chunk.content:
+                yield chunk.content
+
+    else:
+        # General question — stream directly
+        for chunk in llm.stream([("system", SYSTEM_PROMPT), ("human", user_message)]):
+            if chunk.content:
+                yield chunk.content

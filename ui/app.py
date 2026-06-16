@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
-from agent.graph import run_agent
+from agent.graph import run_agent_stream
 
 st.set_page_config(page_title="Coding Agent", layout="wide")
 st.title("Coding Agent")
@@ -59,14 +59,12 @@ if prompt := st.chat_input("Write code, review my code, analyze this file..."):
             st.caption(f"📄 File attached: {file_name}")
 
     with st.chat_message("assistant"):
-        with st.spinner("Agent thinking..."):
-            response = run_agent(
-                prompt,
-                language=language,
-                model_name=model,
-                uploaded_file_content=file_content,
-                uploaded_file_name=file_name
-            )
-        st.markdown(response)
+        response = st.write_stream(run_agent_stream(
+            prompt,
+            language=language,
+            model_name=model,
+            uploaded_file_content=file_content,
+            uploaded_file_name=file_name
+        ))
 
     st.session_state.messages.append({"role": "assistant", "content": response})
