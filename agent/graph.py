@@ -24,7 +24,7 @@ def get_llm(model_name: str):
         if not api_key:
             raise ValueError("GROQ_API_KEY not set in .env")
         from langchain_groq import ChatGroq
-        return ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+        return ChatGroq(model="llama-3.3-70b-versatile", temperature=0)   
 
     elif model_name == "gemini":
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -56,6 +56,7 @@ def get_user_message(state: AgentState) -> str:
     for m in state["messages"]:
         if isinstance(m, tuple) and m[0] == "human":
             return m[1]
+        
         elif hasattr(m, "type") and m.type == "human":
             return m.content
     return ""
