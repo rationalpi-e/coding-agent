@@ -2,9 +2,10 @@ from typing import TypedDict, Annotated, Optional
 from langgraph.graph.message import add_messages
 
 class AgentState(TypedDict):
-    messages: Annotated[list, add_messages]     #here messages has datatype of list but it can also have same as add_message
+    '''This class contains everything that is included and passed around like the prompts, files , states,error, llm, response, skills etc.'''
+    messages: Annotated[list, add_messages]     #here messages has type list and add_messages is metadata which langgraph uses to know how to change the list
     code: Optional[str]
-    language: Optional[str]
+    language: Optional[str]                 #python , c++ , sql
     test_code: Optional[str]
     execution_result: Optional[str]
     test_result: Optional[str]
