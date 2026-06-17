@@ -101,13 +101,34 @@ Zero setup, file-based, and sufficient for demonstrating SQL capabilities. Can b
 **Why subprocess for Python execution?**
 Isolates the executed code from the main process. Prevents user code from crashing the agent or accessing the agent's memory.
 
+## Features
+
+- 🔨 **Code execution** — writes and runs Python, C++, and SQL
+- 🧪 **Test-driven development** — writes failing tests first, then fixes until they pass
+- 🔍 **Code review** — paste any code and get detailed feedback on bugs, performance, style
+- 📄 **File analysis** — upload a `.py`, `.cpp`, `.sql` file and get a full breakdown
+- 🧠 **Memory** — remembers past solutions via ChromaDB vector store
+- ⚡ **Real-time streaming** — see the agent thinking word by word
+- 🐳 **Docker sandboxing** — C++ runs in an isolated container with memory and CPU limits
+- 🔀 **Multi-model** — switch between Groq, Gemini, Claude, and OpenAI from the sidebar
+- 🌐 **Auto language detection** — detects language from your message automatically
+
 ## Roadmap
 
-- [ ] ChromaDB memory — agent remembers past solutions
-- [ ] Test-driven loop — writes failing test first, then fixes until green
-- [ ] Docker sandboxing for C++ — resource limits and network isolation
-- [ ] Streaming output — see agent thinking in real time
-- [ ] Cloud deployment to Railway
+- [x] ChromaDB memory
+- [x] Test-driven loop
+- [x] Docker sandboxing for C++
+- [x] Streaming output
+- [x] Multi-model support
+- [x] Code review skill
+- [x] File analysis skill
+- [x] Deployed on Render
+
+## Demo
+
+🚀 **Live app:** https://your-render-url.onrender.com
+
+> Add a screenshot or GIF here after recording your demo
 
 ## License
 
