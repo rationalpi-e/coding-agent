@@ -6,7 +6,7 @@ def detect_skill(user_message: str , llm) -> str:
     response = llm.invoke([("human", prompt)])
     skill = response.content.strip().lower()
 
-    valid_skills = ["code_execution", "code_review", "file_analysis", "general"]
+    valid_skills = ["code_execution", "code_review", "file_analysis", "general", "file_system"]
     if skill not  in valid_skills:
         return "code_execution"
     

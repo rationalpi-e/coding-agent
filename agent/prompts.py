@@ -104,12 +104,48 @@ SKILL_DETECTOR_PROMPT = """Given the user's message, determine which skill to us
 
 Skills available:
 - code_execution: User wants to write, run, or fix code
-- code_review: User wants feedback, review, or analysis of code they paste
+- code_review: User wants feedback or review of code they paste
 - file_analysis: User uploads or references a file to analyze
+- file_system: User wants to create, read, write, list, or delete files in workspace
 - general: General coding question that doesn't need execution
+
+Examples of file_system requests:
+- "create a flask app and save it to app.py"
+- "read my config.py file"
+- "create a project structure for a REST API"
+- "list all files in workspace"
+- "write a python script to workspace/hello.py"
 
 User message: {message}
 
-Respond with ONLY one of: code_execution, code_review, file_analysis, general
+Respond with ONLY one of: code_execution, code_review, file_analysis, file_system, general
 No explanation, just the skill name.
+"""
+
+FILE_SYSTEM_PROMPT = """You are an expert software engineer with access to a workspace folder.
+
+You can read, write, create, and list files in the workspace.
+
+When asked to create files or projects, always:
+1. Plan the file structure first
+2. Create each file with complete, working content
+3. Confirm what you created at the end
+
+When writing code to files:
+- Write complete, production-quality code
+- Include imports, error handling, and comments
+- Never write placeholder or incomplete code
+
+Available actions you can instruct:
+- READ filename — read a file
+- WRITE filename --- content --- — write content to a file
+- LIST — list all files in workspace
+- CREATE_FOLDER foldername — create a folder
+- DELETE filename — delete a file
+
+Workspace is sandboxed — you cannot access files outside it.
+
+User request: {request}
+
+Current workspace files: {files}
 """

@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
+from tools.file_tools import read_file, write_file, create_folder, list_files, delete_file
 from langgraph.graph import StateGraph, END
 from agent.state import AgentState
 from agent.prompts import (
@@ -271,16 +272,113 @@ def should_continue(state: AgentState) -> str:
 
 
 def route_to_skill(state: AgentState) -> str:
-    """Router — decides which skill node to go to."""
     skill = state.get("skill", "code_execution")
     if skill == "code_review":
         return "code_review"
     elif skill == "file_analysis":
         return "file_analysis"
+    elif skill == "file_system":
+        return "file_system"
     elif skill == "general":
         return "general"
     else:
         return "code_execution"
+    
+    
+def handle_file_system(state: AgentState) -> AgentState:
+    """Agent reads/writes files in the workspace."""
+    from agent.prompts import FILE_SYSTEM_PROMPT
+    llm = state.get("llm")
+    user_message = get_user_message(state)
+
+    # Get current workspace files for context
+    files_result = list_files()
+    current_files = files_result["files"] if files_result["success"] else []
+    files_str = "\n".join(current_files) if current_files else "workspace is empty"
+
+    prompt = FILE_SYSTEM_PROMPT.format(
+        request=user_message,
+        files=files_str
+    )
+
+    response = llm.invoke([("system", SYSTEM_PROMPT), ("human", prompt)])
+    response_text = response.content
+
+    # Parse and execute file operations from LLM response
+    results = []
+    lines = response_text.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        if line.startswith("LIST"):
+            files = list_files()
+            results.append(f"📁 Workspace files:\n" + "\n".join(files["files"]) if files["files"] else "workspace is empty")
+
+        elif line.startswith("CREATE_FOLDER "):
+            folder = line.replace("CREATE_FOLDER ", "").strip()
+            result = create_folder(folder)
+            results.append(f"📁 Created folder: {result['path']}" if result["success"] else f"❌ {result['error']}")
+
+        elif line.startswith("DELETE "):
+            filename = line.replace("DELETE ", "").strip()
+            result = delete_file(filename)
+            results.append(f"🗑️ Deleted: {filename}" if result["success"] else f"❌ {result['error']}")
+
+        elif line.startswith("READ "):
+            filename = line.replace("READ ", "").strip()
+            result = read_file(filename)
+            if result["success"]:
+                results.append(f"📄 {filename}:\n```\n{result['content']}\n```")
+            else:
+                results.append(f"❌ {result['error']}")
+
+        elif line.startswith("WRITE "):
+            filename = line.replace("WRITE ", "").strip()
+            # Collect content until we hit ---END--- or next command
+            content_lines = []
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith("---END---"):
+                content_lines.append(lines[i])
+                i += 1
+            content = "\n".join(content_lines)
+            result = write_file(filename, content)
+            results.append(f"✅ Written: {result['path']}" if result["success"] else f"❌ {result['error']}")
+
+        i += 1
+
+    # If no commands were parsed, extract code blocks and save them
+    if not results:
+        import re
+        pattern = r"```(\w+)?\n(.*?)```"
+        matches = re.findall(pattern, response_text, re.DOTALL)
+        ext_map = {"python": "py", "cpp": "cpp", "sql": "sql", "javascript": "js"}
+
+        for lang, code in matches:
+            lang = lang.lower().strip() if lang else "python"
+            ext = ext_map.get(lang, "txt")
+
+            # Try to extract filename from response
+            filename_match = re.search(r'(?:save|write|create|file)[^\n]*?([a-zA-Z0-9_/]+\.' + ext + r')', response_text, re.IGNORECASE)
+            if filename_match:
+                filename = filename_match.group(1)
+            else:
+                filename = f"output.{ext}"
+
+            result = write_file(filename, code)
+            results.append(f"✅ Saved to: {result['path']}" if result["success"] else f"❌ {result['error']}")
+
+    ops_summary = "\n".join(results) if results else ""
+
+    final_response = response_text
+    if ops_summary:
+        final_response += f"\n\n---\n**File operations:**\n{ops_summary}"
+
+    return {
+        "messages": [response],
+        "status": "done",
+        "execution_result": ops_summary
+    }
 
 
 # Build the graph
@@ -293,6 +391,7 @@ builder.add_node("executor", execute_code)
 builder.add_node("fix_code", fix_code)
 builder.add_node("code_review", review_code)
 builder.add_node("file_analysis", analyze_file)
+builder.add_node("file_system", handle_file_system)
 builder.add_node("general", handle_general)
 builder.add_node("memory", save_to_memory)
 
@@ -301,6 +400,7 @@ builder.add_conditional_edges("router", route_to_skill, {
     "code_execution": "write_tests",
     "code_review": "code_review",
     "file_analysis": "file_analysis",
+    "file_system": "file_system",
     "general": "general"
 })
 builder.add_edge("write_tests", "write_code")
@@ -312,9 +412,9 @@ builder.add_conditional_edges("executor", should_continue, {
 builder.add_edge("fix_code", "executor")
 builder.add_edge("code_review", "memory")
 builder.add_edge("file_analysis", "memory")
+builder.add_edge("file_system", "memory")
 builder.add_edge("general", "memory")
 builder.add_edge("memory", END)
-
 graph = builder.compile()
 
 
@@ -436,6 +536,33 @@ def run_agent_stream(
             if chunk.content:
                 yield chunk.content
 
+    elif skill == "file_system":
+        # Must run through graph so file operations actually execute
+        result = graph.invoke({
+            "messages": [("system", SYSTEM_PROMPT), ("human", user_message)],
+            "iteration_count": 0,
+            "status": "writing",
+            "language": language.lower(),
+            "llm": llm,
+            "uploaded_file_content": uploaded_file_content,
+            "uploaded_file_name": uploaded_file_name
+        })
+
+        last_message = result["messages"][-1].content
+        execution_result = result.get("execution_result", "")
+
+        # Stream the response
+        for chunk in llm.stream([
+            ("system", SYSTEM_PROMPT),
+            ("human", f"Summarize what you did:\n\n{last_message}")
+        ]):
+            if chunk.content:
+                yield chunk.content
+
+        if execution_result:
+            yield f"\n\n---\n**File operations:**\n{execution_result}"
+
+            
     else:
         # General question — stream directly
         for chunk in llm.stream([("system", SYSTEM_PROMPT), ("human", user_message)]):
