@@ -3,7 +3,10 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
+import zipfile
+import io
 from agent.graph import run_agent_stream
+from tools.file_tools import list_files, read_file, delete_file
 
 st.set_page_config(page_title="Coding Agent", layout="wide")
 st.title("Coding Agent")
@@ -36,14 +39,56 @@ uploaded_file = st.sidebar.file_uploader(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Skills available:**")
-st.sidebar.markdown("🔨 Code execution + TDD\n\n🔍 Code review\n\n📄 File analysis\n\n💬 General Q&A")
+st.sidebar.markdown("🔨 Code execution + TDD\n\n🔍 Code review\n\n📄 File analysis\n\n💾 File system\n\n💬 General Q&A")
 st.sidebar.caption("💡 Skill is auto-detected from your message.")
 
+# Workspace files section
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📁 Workspace")
+files_result = list_files()
+
+if files_result["success"] and files_result["files"]:
+    for f in files_result["files"]:
+        st.sidebar.caption(f"📄 {f}")
+
+    if len(files_result["files"]) == 1:
+        filename = files_result["files"][0]
+        content = read_file(filename)
+        if content["success"]:
+            st.sidebar.download_button(
+                label=f"⬇️ Download {filename.split('/')[-1]}",
+                data=content["content"],
+                file_name=filename.split("/")[-1],
+                mime="text/plain"
+            )
+    else:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for filename in files_result["files"]:
+                content = read_file(filename)
+                if content["success"]:
+                    zip_file.writestr(filename, content["content"])
+        zip_buffer.seek(0)
+        st.sidebar.download_button(
+            label="⬇️ Download all files (.zip)",
+            data=zip_buffer,
+            file_name="workspace.zip",
+            mime="application/zip"
+        )
+
+    if st.sidebar.button("🗑️ Clear workspace"):
+        for f in files_result["files"]:
+            delete_file(f)
+        st.rerun()
+else:
+    st.sidebar.caption("No files yet — ask the agent to create some!")
+
+# Chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-if prompt := st.chat_input("Write code, review my code, analyze this file..."):
+if prompt := st.chat_input("Write code, review my code, create files..."):
     file_content = ""
     file_name = ""
 
@@ -68,3 +113,4 @@ if prompt := st.chat_input("Write code, review my code, analyze this file..."):
         ))
 
     st.session_state.messages.append({"role": "assistant", "content": response})
+    st.rerun()
