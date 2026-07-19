@@ -2,10 +2,6 @@
 
 An agentic AI system that writes, executes, and fixes code autonomously. Built with LangGraph and Groq (Llama 3.3 70B). Supports Python, SQL, and C++.
 
-## Demo
-
-> Coming soon — will add screen recording after UI polish
-
 ## What it does
 
 - Takes a coding problem in plain English
@@ -92,9 +88,6 @@ Open `http://localhost:8501` in your browser.
 **Why LangGraph over plain LangChain?**
 LangGraph gives explicit control over the agent loop as a state machine. This makes the fix-and-retry loop predictable and debuggable — you can see exactly which node is running at every step.
 
-**Why Groq?**
-Groq's inference speed is significantly faster than other providers, which matters a lot in an agent loop where the LLM is called multiple times per task. It's also free.
-
 **Why SQLite for SQL execution?**
 Zero setup, file-based, and sufficient for demonstrating SQL capabilities. Can be swapped for PostgreSQL with a one-line change in `sql_executor.py`.
 
@@ -103,15 +96,15 @@ Isolates the executed code from the main process. Prevents user code from crashi
 
 ## Features
 
-- 🔨 **Code execution** — writes and runs Python, C++, and SQL
-- 🧪 **Test-driven development** — writes failing tests first, then fixes until they pass
-- 🔍 **Code review** — paste any code and get detailed feedback on bugs, performance, style
-- 📄 **File analysis** — upload a `.py`, `.cpp`, `.sql` file and get a full breakdown
-- 🧠 **Memory** — remembers past solutions via ChromaDB vector store
-- ⚡ **Real-time streaming** — see the agent thinking word by word
-- 🐳 **Docker sandboxing** — C++ runs in an isolated container with memory and CPU limits
-- 🔀 **Multi-model** — switch between Groq, Gemini, Claude, and OpenAI from the sidebar
-- 🌐 **Auto language detection** — detects language from your message automatically
+-  **Code execution** — writes and runs Python, C++, and SQL
+-  **Test-driven development** — writes failing tests first, then fixes until they pass
+-  **Code review** — paste any code and get detailed feedback on bugs, performance, style
+-  **File analysis** — upload a `.py`, `.cpp`, `.sql` file and get a full breakdown
+-  **Memory** — remembers past solutions via ChromaDB vector store
+-  **Real-time streaming** — see the agent thinking word by word
+-  **Docker sandboxing** — C++ runs in an isolated container with memory and CPU limits
+-  **Multi-model** — switch between Groq, Gemini, Claude, and OpenAI from the sidebar
+-  **Auto language detection** — detects language from your message automatically
 
 ## Roadmap
 
@@ -128,7 +121,6 @@ Isolates the executed code from the main process. Prevents user code from crashi
 
 🚀 **Live app:** https://coding-agent-tksw.onrender.com
 
-> Add a screenshot or GIF here after recording your demo
 
 ## License
 
